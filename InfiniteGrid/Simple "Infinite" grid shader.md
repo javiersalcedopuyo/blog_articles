@@ -10,7 +10,8 @@ Here's a detailed step-by-step explanation of how it works.
 > ⚠️ DISCLAMER 1:
 > The goal of this article is just to document and organise my thought process while I was trying to understand the code behind another implementation.
 > If you want something robust / production-worthy, you should read [this](https://bgolus.medium.com/the-best-darn-grid-shader-yet-727f9278b9d8) instead.
-![](this_one_is_mine.png)
+>
+> ![](img/this_one_is_mine.png)
 
 > ⚠️ DISCLAIMER 2:
 > I'm using MSL (Metal Shading Language) because I like it and because my toy renderer uses Metal as the graphics API anyway, but it should be pretty straightforward to translate it to GLSL or HLSL.
@@ -66,17 +67,22 @@ float4 main(FragmentIn frag [[stage_in]])
 ```
 
 ...you'll get something like this:
-![](quad.png)
+
+![](img/quad.png)
+
 ### 1.2 Fragment Shader
 #### 1.2.0 Modulo
 > ⚠️ IMPORTANT in case you're using MSL or HLSL
 
 [GLSL](https://registry.khronos.org/OpenGL-Refpages/gl4/html/mod.xhtml) defines its modulo function as `x - y * floor(x/y)`
 which produces this type of repeating pattern:
-![](glsl_mod.png)
+
+![](img/glsl_mod.png)
+
 However, both [MSL](https://developer.apple.com/metal/Metal-Shading-Language-Specification.pdf) and [HLSL](https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-fmod) define it as `x - y * trunc(x/y)`,
 which produces this:
-![](fmod.png)
+
+![](img/fmod.png)
 
 Since I'm using MSL, I'll add a template function that mimics GLSL's `mod`:
 ```C++
@@ -115,7 +121,7 @@ If we normalise and output this as a colour, we'll get something like this:
 
 | Cell UVs                  | Subcell UVs          |
 | ------------------------- | -------------------- |
-| ![cell_uvs](cell_uvs.png) | ![](subcell_uvs.png) |
+| ![cell_uvs](img/cell_uvs.png) | ![](img/subcell_uvs.png) |
 
 Next we calculate the distances in U and V to the (sub)cell's edge.
 The coordinates we calculated before are in the [0, (sub)cell_size] range so:
@@ -149,7 +155,7 @@ return color;
 The line thicknesses are halved because only half the line is within a given (sub)cell, as the other half is in the neighbouring (sub)cell
 
 However, this has obvious issues (I made the plane opaque and the lines yellow to make it clearer):
-![](first_grid.png)
+![](img/first_grid.png)
 #### 1.2.2 Get uniform lines
 
 So the problem here is that, due to perspective, the coordinates can change drastically from one fragment to another, meaning that the exact coordinates that fall within the line might be skipped from one fragment to the next.
@@ -170,10 +176,10 @@ if ( any( distance_to_cell    < adjusted_cell_line_thickness ) )    color = cell
 return color;
 ```
 
-![](corrected_grid.png)
+![](img/corrected_grid.png)
 
 And this is how it looks with dimensions 100x100m and the actual colour:
-![](corrected_grid_2.png)
+![](img/corrected_grid_2.png)
 
 ### 1.3 Fade out
 This already looks pretty good, but you can see issues in the distance: mainly aliasing and [Moiré patterns](https://en.wikipedia.org/wiki/Moir%C3%A9_pattern).
@@ -181,7 +187,7 @@ There's a lot of literature about how to fix these kind of issues, but I decided
 
 ...just fade out the grid around the camera so you can't see them!
 
-![](lazy_filtering.png)
+![](img/lazy_filtering.png)
 
 First, we need the camera position.
 Let's make the necessary changes in the vertex shader:
@@ -264,13 +270,15 @@ opacity_falloff = smoothstep(1.0, 0.0, distance_to_camera / fade_distance);
 ```
 
 Et voilà!
-![](final_grid.png)
+
+![](img/final_grid.png)
 
 ---
 ## 2. Make it "infinite"
 We're almost done, but at the moment you can (eventually) move outside of the plane.
 Thankfully, it has a very easy solution, just move the plane *and the UVs* with the camera. Think of it as a moving treadmill.
-![](treadmill_cat.gif)
+
+![](img/treadmill_cat.gif)
 
 In the vertex shader:
 ```C++
@@ -302,7 +310,9 @@ In terms of future work, there's still a bunch of stuff to be done:
 
 However, at the time of writing this, neither sound very fun, and I have a loong list of other features that do.
 At the end of the day, this is a toy project and its sole purpose is to have fun while I experiment and learn.
-![](does_not_spark_joy.png)
+
+![](img/does_not_spark_joy.png)
+
 So I consider it done (for now).
 
 ---
